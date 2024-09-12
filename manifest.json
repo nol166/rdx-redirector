@@ -1,0 +1,21 @@
+{
+  "manifest_version": 2,
+  "name": "Reddit to RDX Redirector",
+  "version": "1.0",
+  "description": "Redirect Reddit links to rdx.overdevs.com",
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "permissions": ["webRequest", "webRequestBlocking", "*://www.reddit.com/*"],
+  "icons": {
+    "48": "icons/combined-icon-48.png",
+    "96": "icons/combined-icon-96.png"
+  },
+  "applications": {
+    "gecko": {
+      "id": "rdxredirect@localhost",
+      "strict_min_version": "57.0"
+    }
+  }
+}
