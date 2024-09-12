@@ -32,7 +32,9 @@ const handleMainUrl = (redditUrl) => {
 };
 
 const handleSubredditUrl = (redditUrl) => {
-  const subredditMatch = redditUrl.match(/https:\/\/www\.reddit\.com\/r\/([^/]+)\/?$/);
+  const subredditMatch = redditUrl.match(
+    /https:\/\/www\.reddit\.com\/r\/([^/]+)\/?$/
+  );
   if (subredditMatch) {
     return `https://rdx.overdevs.com/subreddit.html?r=${subredditMatch[1]}`;
   }
@@ -40,7 +42,9 @@ const handleSubredditUrl = (redditUrl) => {
 };
 
 const handlePostUrl = (redditUrl) => {
-  const postMatch = redditUrl.match(/https:\/\/www\.reddit\.com\/r\/([^/]+)\/comments\/([^/]+)\/([^/]+)\/?$/);
+  const postMatch = redditUrl.match(
+    /https:\/\/www\.reddit\.com\/r\/([^/]+)\/comments\/([^/]+)\/([^/]+)\/?$/
+  );
   if (postMatch) {
     return `https://rdx.overdevs.com/comments.html?url=${redditUrl}`;
   }
