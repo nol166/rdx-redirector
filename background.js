@@ -23,36 +23,97 @@ const intentionalVisit = async () => {
   return isReddit ? true : false;
 };
 
+/**
+ * Handle the main Reddit homepage URL
+ * @param {string} redditUrl
+ * @returns {string|null} redirect URL
+ */
 const handleMainUrl = (redditUrl) => {
-  if (redditUrl === 'https://www.reddit.com/') {
-    return 'https://rdx.overdevs.com/';
+  try {
+    const url = new URL(redditUrl);
+    if (url.hostname.endsWith('reddit.com') && (url.pathname === '/' || url.pathname === '')) {
+      return 'https://rdx.overdevs.com/';
+    }
+  } catch (error) {
+    console.error('Error parsing main URL:', error);
   }
   return null;
 };
 
+/**
+ * Handle subreddit listing URLs, including optional sort/pagination paths
+ * @param {string} redditUrl
+ * @returns {string|null} redirect URL
+ */
 const handleSubredditUrl = (redditUrl) => {
-  const subredditMatch = redditUrl.match(
-    /https:\/\/www\.reddit\.com\/r\/([^/]+)\/?$/
-  );
-  if (subredditMatch) {
-    return `https://rdx.overdevs.com/subreddit.html?r=${subredditMatch[1]}`;
+  try {
+    const url = new URL(redditUrl);
+    if (!url.hostname.endsWith('reddit.com')) {
+      return null;
+    }
+    const parts = url.pathname.split('/').filter(Boolean);
+    // e.g. ["r", "subreddit", ...]
+    if (parts[0] === 'r' && parts[1]) {
+      // ignore post pages
+      if (parts[2] === 'comments') {
+        return null;
+      }
+      const subreddit = parts[1];
+      return `https://rdx.overdevs.com/subreddit.html?r=${encodeURIComponent(subreddit)}`;
+    }
+  } catch (error) {
+    console.error('Error parsing subreddit URL:', error);
   }
   return null;
 };
 
+/**
+ * Handle post/comment thread URLs
+ * @param {string} redditUrl
+ * @returns {string|null} redirect URL
+ */
 const handlePostUrl = (redditUrl) => {
-  const postMatch = redditUrl.match(
-    /https:\/\/www\.reddit\.com\/r\/([^/]+)\/comments\/([^/]+)\/([^/]+)\/?$/
-  );
-  if (postMatch) {
-    return `https://rdx.overdevs.com/comments.html?url=${redditUrl}`;
+  try {
+    const url = new URL(redditUrl);
+    if (!url.hostname.endsWith('reddit.com')) {
+      return null;
+    }
+    const parts = url.pathname.split('/').filter(Boolean);
+    // e.g. ["r", "subreddit", "comments", "postId", …]
+    if (parts[0] === 'r' && parts[2] === 'comments' && parts[1] && parts[3]) {
+      return `https://rdx.overdevs.com/comments.html?url=${encodeURIComponent(redditUrl)}`;
+    }
+  } catch (error) {
+    console.error('Error parsing post URL:', error);
+  }
+  return null;
+};
+/**
+ * Handle user profile URLs (/user/username or /u/username)
+ * @param {string} redditUrl
+ * @returns {string|null} redirect URL
+ */
+const handleUserProfileUrl = (redditUrl) => {
+  try {
+    const url = new URL(redditUrl);
+    if (!url.hostname.endsWith('reddit.com')) {
+      return null;
+    }
+    const parts = url.pathname.split('/').filter(Boolean);
+    // e.g. ["user"|"u", "username"]
+    if ((parts[0] === 'user' || parts[0] === 'u') && parts[1]) {
+      const username = parts[1];
+      return `https://rdx.overdevs.com/user.html?u=${encodeURIComponent(username)}`;
+    }
+  } catch (error) {
+    console.error('Error parsing user profile URL:', error);
   }
   return null;
 };
 
 // Main redirect function
 const redirect = async (requestDetails) => {
-  // If already on reddit, do not redirect
+  // If user is currently on a Reddit page, assume intentional visit
   const intentional = await intentionalVisit();
   if (intentional) {
     console.debug('User is intentionally visiting Reddit, not redirecting');
@@ -60,43 +121,33 @@ const redirect = async (requestDetails) => {
   }
 
   const redditUrl = requestDetails.url;
-
-  if (redditUrl.includes('redirected=true')) {
-    console.debug('Redirection already occurred, not redirecting again');
+  // Prevent loops: skip if already redirected or targeting rdx site
+  if (redditUrl.includes('redirected=true') || redditUrl.includes('rdx.overdevs.com')) {
+    console.debug('Redirection already occurred or targeting rdx, not redirecting');
     return;
   }
 
-  let rdxUrl = redditUrl;
-
-  const mainUrl = handleMainUrl(redditUrl);
-  if (mainUrl) {
-    rdxUrl = mainUrl;
+  // Determine the appropriate rdx redirect based on URL patterns
+  let rdxUrl = null;
+  rdxUrl = handleMainUrl(redditUrl)
+    || handlePostUrl(redditUrl)
+    || handleSubredditUrl(redditUrl)
+    || handleUserProfileUrl(redditUrl);
+  if (!rdxUrl) {
+    // No matching pattern; do not redirect
+    return;
   }
 
-  const subredditUrl = handleSubredditUrl(redditUrl);
-  if (subredditUrl) {
-    rdxUrl = subredditUrl;
-  }
-
-  const postUrl = handlePostUrl(redditUrl);
-  if (postUrl) {
-    rdxUrl = postUrl;
-  }
-
-  // Add query param for redirection to prevent infinite loop
-  if (!rdxUrl.includes('redirected=true')) {
-    rdxUrl += (rdxUrl.includes('?') ? '&' : '?') + 'redirected=true';
-  }
-
-  return {
-    redirectUrl: rdxUrl,
-  };
+  // Append redirect flag to avoid infinite loops
+  rdxUrl += (rdxUrl.includes('?') ? '&' : '?') + 'redirected=true';
+  return { redirectUrl: rdxUrl };
 };
 
 // listener for web requests
+// Listen to requests on any reddit.com subdomain
 browser.webRequest.onBeforeRequest.addListener(
   redirect,
-  { urls: ['*://www.reddit.com/*'] },
+  { urls: ['*://*.reddit.com/*'] },
   ['blocking']
 );
 

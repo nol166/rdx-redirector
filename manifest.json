@@ -7,7 +7,7 @@
     "scripts": ["background.js"],
     "persistent": false
   },
-  "permissions": ["webRequest", "webRequestBlocking", "*://www.reddit.com/*"],
+  "permissions": ["webRequest", "webRequestBlocking", "*://*.reddit.com/*"],
   "icons": {
     "48": "icons/combined-icon-48.png",
     "96": "icons/combined-icon-96.png"
