@@ -1,4 +1,3 @@
-// Function to check if the tab's URL includes 'reddit.com'
 const checkCurrentTab = async () => {
   try {
     const [currentTab] = await browser.tabs.query({
